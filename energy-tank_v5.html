@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2B3A3A">
+<title>エネルギータンク</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;600;800&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
+
+  :root{
+    --bg: #EAEEE9;
+    --surface: #FFFFFF;
+    --ink: #2B3A3A;
+    --ink-soft: #67746F;
+    --ink-faint: #97A39C;
+    --line: #DBE3DA;
+    --rose: #B85C4A;
+    --overall: #6B7C8C;
+    --shadow: 0 2px 14px rgba(43,58,58,0.07);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans JP', system-ui, sans-serif;
+    font-weight: 400;
+    min-height: 100vh;
+  }
+  .serif{ font-family:'Shippori Mincho B1', serif; }
+  .tnum{ font-variant-numeric: tabular-nums; }
+
+  .app{ max-width: 480px; margin: 0 auto; padding: calc(18px + var(--safe-top)) 16px calc(90px + var(--safe-bottom)); }
+
+  .header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .brand{ font-family:'Shippori Mincho B1', serif; font-size:21px; font-weight:600; letter-spacing:0.04em; }
+  .brand small{ display:block; font-family:'Noto Sans JP',sans-serif; font-size:11px; font-weight:400; color:var(--ink-faint); letter-spacing:0.08em; margin-top:2px; }
+  .icon-btn{
+    background:none; border:none; cursor:pointer; color: var(--ink-soft);
+    width:44px; height:44px; display:flex; align-items:center; justify-content:center;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  .icon-btn svg{ width:23px; height:23px; display:block; pointer-events:none; }
+
+  .date-line{ font-size:12px; color:var(--ink-faint); margin: 2px 0 16px; letter-spacing:0.03em; }
+
+  .warn-banner{
+    background: #F4E8E4; border:1px solid #E3C9C0; color:#8C4C3D;
+    border-radius:12px; padding:12px 14px; font-size:12.5px; line-height:1.6;
+    display:flex; align-items:center; gap:10px; margin-bottom:16px;
+  }
+  .warn-banner button{ flex-shrink:0; background:#8C4C3D; color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:11.5px; cursor:pointer; font-family:inherit; }
+
+  /* tank carousel */
+  .tank-carousel{
+    display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none; margin: 6px 0 2px;
+  }
+  .tank-carousel::-webkit-scrollbar{ display:none; }
+  .tank-page{ flex:0 0 100%; scroll-snap-align:center; display:flex; flex-direction:column; align-items:center; }
+  .tank-wrap-big{ width:170px; aspect-ratio: 170/300; position:relative; }
+  .tank-big{
+    position:relative; width:100%; height:100%; border-radius:85px;
+    background: var(--surface); border:2px solid var(--line);
+    overflow:hidden; box-shadow: inset 0 2px 10px rgba(43,58,58,0.06);
+  }
+  .liquid{
+    position:absolute; left:-1px; right:-1px; bottom:-2px;
+    height:50%; transition: height 0.7s cubic-bezier(.4,0,.2,1), background 0.6s ease;
+  }
+  .liquid.no-transition{ transition:none; }
+  .liquid::before{
+    content:''; position:absolute; top:-9px; left:0; width:200%; height:18px;
+    background-image: radial-gradient(ellipse 26px 11px at 26px 9px, var(--liq-top,#999) 55%, transparent 60%);
+    background-size: 52px 18px; background-repeat: repeat-x;
+    animation: wave 3.4s linear infinite; opacity:0.9;
+  }
+  @keyframes wave{ from{ transform:translateX(0);} to{ transform:translateX(-52px);} }
+  @media (prefers-reduced-motion: reduce){ .liquid::before{ animation:none; } }
+
+  .tank-readout-big{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .tank-pct-big{ font-family:'Shippori Mincho B1', serif; font-size:36px; font-weight:600; color:var(--ink); text-shadow: 0 1px 6px rgba(255,255,255,0.55); }
+
+  .tank-name-big{ margin-top:12px; font-size:13px; color:var(--ink-soft); text-align:center; font-weight:500; }
+  .tank-dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:5px; vertical-align:middle; margin-bottom:1px; }
+
+  .tank-grid-row{ display:flex; justify-content:space-between; gap:8px; width:100%; padding:0 2px; }
+  .tank-grid-unit{ flex:1; display:flex; flex-direction:column; align-items:center; min-width:0; }
+  .tank-wrap-mini{ width:100%; max-width:78px; aspect-ratio: 78/190; position:relative; }
+  .tank-mini{
+    position:relative; width:100%; height:100%; border-radius:40px;
+    background: var(--surface); border:2px solid var(--line);
+    overflow:hidden; box-shadow: inset 0 2px 8px rgba(43,58,58,0.06);
+  }
+  .tank-grid-unit.interactive .tank-mini{ cursor:grab; touch-action:none; border-color: var(--unit-color, var(--line)); border-width:2.5px; }
+  .tank-grid-unit.interactive .tank-mini:active{ cursor:grabbing; }
+  .tank-readout-mini{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .tank-pct-mini{ font-family:'Shippori Mincho B1', serif; font-size:15px; font-weight:600; color:var(--ink); text-shadow: 0 1px 6px rgba(255,255,255,0.55); }
+  .tank-name-mini{ margin-top:8px; font-size:11px; color:var(--ink-soft); text-align:center; font-weight:500; }
+  .mini-steppers{ display:flex; gap:5px; margin-top:7px; }
+  .mini-step-btn{
+    width:26px; height:26px; border-radius:50%; border:1px solid var(--line); background:#fff;
+    font-family:inherit; font-size:14px; color:var(--ink-soft); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; padding:0; line-height:1;
+  }
+  .drag-hint{ font-size:9.5px; color:var(--ink-faint); text-align:center; margin-top:14px; }
+
+  .message{ margin-top:16px; font-size:13px; color:var(--ink-soft); text-align:center; line-height:1.6; padding: 0 8px; }
+
+  .section-title{ font-size:11px; letter-spacing:0.12em; color:var(--ink-faint); margin: 22px 2px 10px; font-weight:500; }
+
+  .chips-row{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
+  .chips-row::-webkit-scrollbar{ display:none; }
+  .chip{
+    flex-shrink:0; display:flex; align-items:center; gap:6px;
+    background: var(--surface); border:1px solid var(--line); border-radius:20px;
+    padding:9px 14px; font-size:13px; color:var(--ink); cursor:pointer;
+    font-family:inherit; transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .chip:active{ transform: scale(0.96); }
+  .chip .dot{ width:8px; height:8px; border-radius:50%; background: var(--chip-color); flex-shrink:0; }
+
+  .mode-banner{
+    background: var(--surface); border-radius:14px; padding:14px; margin-top:2px;
+    box-shadow: var(--shadow); display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .mode-banner-info{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .mode-banner-title{ font-size:13.5px; font-weight:600; color:var(--ink); display:flex; align-items:center; gap:6px; }
+  .mode-banner-title .live-dot{ width:8px; height:8px; border-radius:50%; background:#6E9B6E; animation: pulse 1.6s ease-in-out infinite; flex-shrink:0; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+  .mode-banner-sub{ font-size:11px; color:var(--ink-faint); }
+  .mode-banner-actions{ display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex-shrink:0; }
+  .mode-end-btn{ background:var(--ink); color:#fff; border:none; border-radius:10px; padding:9px 14px; font-family:inherit; font-size:12.5px; cursor:pointer; white-space:nowrap; }
+  .mode-cancel-btn{ background:none; color:var(--ink-faint); border:none; font-family:inherit; font-size:11px; cursor:pointer; padding:2px 4px; }
+
+  .breakdown-switch{ display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+  .breakdown-switch button{
+    border:1px solid var(--line); background:#fff; border-radius:14px; padding:6px 11px; font-family:inherit;
+    font-size:11.5px; cursor:pointer; color:var(--ink-soft); display:flex; align-items:center; gap:5px;
+  }
+  .breakdown-switch button .dot{ width:7px; height:7px; border-radius:50%; }
+  .breakdown-switch button.selected{ color:#fff; border-color:transparent; }
+  .breakdown-list{ display:flex; flex-direction:column; gap:10px; }
+  .bar-row{ display:flex; align-items:center; gap:10px; font-size:12.5px; }
+  .bar-label{ width:56px; flex-shrink:0; color:var(--ink-soft); text-align:right; }
+  .bar-track{ flex:1; height:8px; background:var(--line); border-radius:6px; overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:6px; transition: width 0.5s ease; }
+  .bar-value{ width:44px; flex-shrink:0; text-align:right; color:var(--ink); font-variant-numeric:tabular-nums; }
+
+  .trend-legend{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+  .trend-legend span{ font-size:10.5px; color:var(--ink-soft); display:flex; align-items:center; gap:4px; }
+  .trend-legend .dot{ width:7px; height:7px; border-radius:50%; }
+  .trend-row{ display:flex; align-items:flex-end; gap:6px; height:70px; padding:0 2px; }
+  .trend-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end; }
+  .trend-cluster{ display:flex; align-items:flex-end; gap:2px; height:100%; }
+  .trend-bar{ width:5px; border-radius:3px 3px 1px 1px; min-height:3px; transition: height 0.5s ease; }
+  .trend-day{ font-size:10px; color:var(--ink-faint); }
+  .trend-col.today .trend-day{ color:var(--ink); font-weight:500; }
+
+  .history-list{ display:flex; flex-direction:column; gap:2px; }
+  .history-item{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .history-item:last-child{ border-bottom:none; }
+  .history-time{ width:38px; flex-shrink:0; color:var(--ink-faint); font-variant-numeric:tabular-nums; font-size:11.5px; }
+  .history-dots{ display:flex; gap:2px; flex-shrink:0; }
+  .history-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .history-cat{ flex:1; min-width:0; }
+  .history-energy{ color:var(--ink-faint); font-size:11px; }
+  .history-note{ color:var(--ink-faint); font-size:11px; margin-top:1px; }
+  .history-amount{ font-variant-numeric:tabular-nums; font-weight:500; flex-shrink:0; }
+  .history-del{ background:none; border:none; color:var(--ink-faint); font-size:16px; cursor:pointer; padding:2px 4px; flex-shrink:0; }
+
+  .empty-state{ font-size:12.5px; color:var(--ink-faint); text-align:center; padding:22px 10px; line-height:1.7; }
+
+  .insight-card{
+    background: var(--surface); border-radius:12px; padding:13px 14px; margin-bottom:10px;
+    border-left:4px solid var(--card-color, var(--ink-soft)); font-size:12.5px; line-height:1.6;
+    color:var(--ink); box-shadow: var(--shadow);
+  }
+
+  .tip{ margin-top:26px; border-top:1px solid var(--line); padding-top:14px; }
+  .tip-toggle{ background:none; border:none; font-family:inherit; font-size:12px; color:var(--ink-soft); cursor:pointer; padding:0; display:flex; align-items:center; gap:6px; }
+  .tip-content{ display:none; font-size:12px; color:var(--ink-soft); line-height:1.8; margin-top:10px; background:var(--surface); border-radius:10px; padding:12px 14px; }
+  .tip-content.open{ display:block; }
+
+  .screen{ display:none; }
+  .screen.active{ display:block; }
+
+  .bottom-nav{
+    position:fixed; left:0; right:0; bottom:0; z-index:40;
+    background: var(--surface); border-top:1px solid var(--line);
+    display:flex; padding-bottom: var(--safe-bottom);
+    box-shadow: 0 -2px 12px rgba(43,58,58,0.06);
+  }
+  .nav-btn{
+    flex:1; background:none; border:none; font-family:inherit; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 0 8px;
+    color: var(--ink-faint); font-size:10.5px;
+  }
+  .nav-btn .nav-icon{ font-size:19px; line-height:1; }
+  .nav-btn.active{ color: var(--ink); }
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(43,58,58,0.35); display:none;
+    align-items:flex-end; justify-content:center; z-index:50;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background: var(--bg); width:100%; max-width:480px; max-height:86vh; overflow-y:auto;
+    border-radius:20px 20px 0 0; padding:20px 20px calc(28px + var(--safe-bottom)); animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp{ from{ transform:translateY(30px); opacity:0;} to{ transform:translateY(0); opacity:1;} }
+  .modal-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .modal-header h2{ font-family:'Shippori Mincho B1',serif; font-size:18px; font-weight:600; margin:0; }
+  .field{ margin-bottom:20px; }
+  .field > label{ display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:8px; letter-spacing:0.05em; }
+
+  .energy-editor, .cat-editor{ display:flex; flex-direction:column; gap:12px; }
+  .energy-editor-row, .cat-editor-row{ background:#fff; border-radius:12px; padding:12px; border:1px solid var(--line); }
+  .row-top{ display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+  .row-top input[type=text]{ flex:1; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-family:inherit; font-size:13px; }
+  .row-del{ background:none; border:none; color:var(--ink-faint); font-size:18px; cursor:pointer; padding:2px 6px; }
+  .row-bottom{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .swatches{ display:flex; gap:6px; }
+  .swatch{ width:20px; height:20px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
+  .swatch.selected{ border-color: var(--ink); }
+  .type-toggle{ display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .type-toggle button{ border:none; background:#fff; font-family:inherit; font-size:11.5px; padding:6px 10px; cursor:pointer; color:var(--ink-soft); }
+  .type-toggle button.selected{ background:var(--ink); color:#fff; }
+  .budget-input{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ink-soft); }
+  .budget-input input{ width:60px; border:1px solid var(--line); border-radius:8px; padding:6px 8px; font-family:inherit; font-size:13px; }
+  .add-row-btn{
+    background:none; border:1px dashed var(--ink-faint); border-radius:10px; padding:10px; font-family:inherit;
+    font-size:12.5px; color:var(--ink-soft); cursor:pointer; margin-top:4px;
+  }
+  .modal-save{ width:100%; background:var(--ink); color:#fff; border:none; border-radius:12px; padding:13px; font-family:inherit; font-size:14px; margin-top:6px; cursor:pointer; }
+
+  .toast{
+    position:fixed; bottom:calc(76px + var(--safe-bottom)); left:50%; transform:translateX(-50%) translateY(20px);
+    background: var(--ink); color:#fff; padding:9px 18px; border-radius:20px; font-size:12.5px;
+    opacity:0; transition: all 0.25s ease; z-index:60; pointer-events:none;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <div class="header">
+    <div class="brand">energy tank<small>エネルギータンク</small></div>
+    <button class="icon-btn" id="settingsBtn" aria-label="設定">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+  <div class="date-line" id="dateLine"></div>
+
+  <div id="warnBanner"></div>
+
+  <!-- HOME SCREEN -->
+  <div class="screen active" id="screenHome">
+    <div class="tank-carousel" id="tankCarousel"></div>
+    <div class="carousel-dots" id="carouselDots" style="display:flex; justify-content:center; gap:6px; margin-top:12px;"></div>
+    <div class="message" id="message"></div>
+
+    <div class="section-title">記録する</div>
+    <div id="modeAreaWrap"></div>
+
+    <div class="tip">
+      <button class="tip-toggle" id="tipToggle">📲 ホーム画面に追加する方法</button>
+      <div class="tip-content" id="tipContent">
+        <strong>iPhone（Safari）</strong><br>
+        共有ボタン（□に↑）をタップ →「ホーム画面に追加」を選択<br><br>
+        <strong>Android（Chrome）</strong><br>
+        右上のメニュー（⋮）をタップ →「ホーム画面に追加」または「アプリをインストール」を選択<br><br>
+        追加後はアイコンをタップするだけで、このタンクにすぐアクセスできます。
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY SCREEN -->
+  <div class="screen" id="screenHistory">
+    <div class="section-title">カテゴリ別内訳（本日）</div>
+    <div class="breakdown-switch" id="breakdownSwitch"></div>
+    <div class="breakdown-list" id="breakdown"></div>
+
+    <div class="section-title">直近7日間の推移</div>
+    <div class="trend-legend" id="trendLegend"></div>
+    <div class="trend-row" id="trend"></div>
+
+    <div class="section-title">本日の記録</div>
+    <div class="history-list" id="history"></div>
+  </div>
+
+  <!-- ANALYSIS SCREEN -->
+  <div class="screen" id="screenAnalysis">
+    <div class="section-title">エネルギー消費の傾向（直近7日間）</div>
+    <div id="insightDominant"></div>
+
+    <div class="section-title">曜日ごとの傾向</div>
+    <div id="insightWeekday"></div>
+  </div>
+
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-btn active" id="navHome" data-screen="Home"><span class="nav-icon">🏠</span>ホーム</button>
+  <button class="nav-btn" id="navHistory" data-screen="History"><span class="nav-icon">📖</span>履歴</button>
+  <button class="nav-btn" id="navAnalysis" data-screen="Analysis"><span class="nav-icon">📊</span>分析</button>
+</div>
+
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>設定</h2>
+      <button class="icon-btn" id="closeModal">✕</button>
+    </div>
+
+    <div class="field">
+      <label>エネルギーの種類</label>
+      <div class="energy-editor" id="energyEditor"></div>
+      <button class="add-row-btn" id="addEnergyBtn">＋ エネルギーを追加</button>
+    </div>
+
+    <div class="field">
+      <label>カテゴリ</label>
+      <div class="cat-editor" id="catEditor"></div>
+      <button class="add-row-btn" id="addCatBtn">＋ カテゴリを追加</button>
+    </div>
+
+    <button class="modal-save" id="saveSettings">保存する</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PRESET_COLORS = ['#C97B5C','#8B7FB0','#5C9C9B','#B79A4B','#7A9B76','#B98BAE','#5B7C99','#B85C4A'];
+const STORAGE_KEY = 'app-data';
+const hasClaudeStorage = (typeof window !== 'undefined') && !!window.storage && typeof window.storage.get === 'function';
+
+async function storageGet(key){
+  if (hasClaudeStorage) return await window.storage.get(key, false);
+  const raw = localStorage.getItem(key);
+  if (raw === null) throw new Error('not found');
+  return { key, value: raw, shared:false };
+}
+async function storageSet(key, value){
+  if (hasClaudeStorage) return await window.storage.set(key, value, false);
+  localStorage.setItem(key, value);
+  return { key, value, shared:false };
+}
+
+let data = null;
+let breakdownEnergyId = null;
+let currentTankPage = 0;
+
+function todayStr(d = new Date()){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function timeStr(d = new Date()){
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function shade(hex, amt){
+  const n = parseInt(hex.slice(1),16);
+  let r=(n>>16)+amt, g=(n>>8 & 0xff)+amt, b=(n & 0xff)+amt;
+  r=Math.max(0,Math.min(255,r)); g=Math.max(0,Math.min(255,g)); b=Math.max(0,Math.min(255,b));
+  return '#'+(1<<24 | r<<16 | g<<8 | b).toString(16).slice(1);
+}
+function mix(hex1, hex2, t){
+  const n1=parseInt(hex1.slice(1),16), n2=parseInt(hex2.slice(1),16);
+  const r=Math.round(((n1>>16)*(1-t))+((n2>>16)*t));
+  const g=Math.round(((n1>>8 & 0xff)*(1-t))+((n2>>8 & 0xff)*t));
+  const b=Math.round(((n1 & 0xff)*(1-t))+((n2 & 0xff)*t));
+  return '#'+(1<<24 | r<<16 | g<<8 | b).toString(16).slice(1);
+}
+
+function defaultData(){
+  return {
+    energyTypes: [
+      { id:'stamina', name:'体力',     color:'#C97B5C', budget:100, overnightRecovery:70 },
+      { id:'mental',  name:'メンタル', color:'#8B7FB0', budget:100, overnightRecovery:70 },
+      { id:'eye',     name:'眼精疲労', color:'#5C9C9B', budget:100, overnightRecovery:70 },
+      { id:'focus',   name:'集中力',   color:'#B79A4B', budget:100, overnightRecovery:70 }
+    ],
+    categories: [
+      { id:'work',  name:'仕事',   color:'#5B7C99', type:'spend' },
+      { id:'side',  name:'副業',   color:'#C98A4B', type:'spend' },
+      { id:'study', name:'勉強',   color:'#6E8FA3', type:'spend' },
+      { id:'house', name:'家事',   color:'#7A9B76', type:'spend' },
+      { id:'rest',  name:'休息',   color:'#D8A857', type:'gain'  },
+      { id:'other', name:'その他', color:'#8A93A6', type:'spend' }
+    ],
+    entries: [],
+    dismissedWarn: [],
+    migratedStudy: true,
+    activeMode: null,
+    lastSeenDate: null
+  };
+}
+
+function addDays(dateStr, n){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return todayStr(d);
+}
+
+function performRollover(){
+  if (!data.lastSeenDate){
+    data.lastSeenDate = todayStr();
+    return;
+  }
+  let cursor = addDays(data.lastSeenDate, 1);
+  const today = todayStr();
+  let guard = 0;
+  while (cursor <= today && guard < 365){
+    guard++;
+    const prevDate = addDays(cursor, -1);
+    data.energyTypes.forEach(en=>{
+      const recovery = (typeof en.overnightRecovery === 'number') ? en.overnightRecovery : Math.round(en.budget*0.7);
+      const prevEnd = remainingFor(prevDate, en);
+      const newStart = Math.min(en.budget, prevEnd + recovery);
+      const carry = Math.round(newStart - en.budget);
+      if (carry !== 0){
+        data.entries.push({ id: genId(), date: cursor, time:'00:00', categoryId:'__carryover__', energyId: en.id, amount: carry, note:'前日からの繰り越し' });
+      }
+    });
+    cursor = addDays(cursor, 1);
+  }
+  data.lastSeenDate = today;
+}
+
+async function loadData(){
+  try{
+    const res = await storageGet(STORAGE_KEY);
+    data = res && res.value ? JSON.parse(res.value) : defaultData();
+  }catch(e){
+    data = defaultData();
+    await saveData();
+  }
+  if (!data.energyTypes) data.energyTypes = defaultData().energyTypes;
+  data.energyTypes.forEach(en=>{
+    if (typeof en.overnightRecovery !== 'number') en.overnightRecovery = Math.round(en.budget * 0.7);
+  });
+  if (!data.dismissedWarn) data.dismissedWarn = [];
+  if (data.activeMode === undefined) data.activeMode = null;
+  if (!data.migratedStudy){
+    const hasStudy = data.categories.some(c => c.name === '勉強');
+    if (!hasStudy){
+      data.categories.push({ id:'study', name:'勉強', color:'#6E8FA3', type:'spend' });
+    }
+    data.migratedStudy = true;
+  }
+  performRollover();
+  await saveData();
+  breakdownEnergyId = data.energyTypes[0] ? data.energyTypes[0].id : null;
+}
+async function saveData(){
+  try{
+    await storageSet(STORAGE_KEY, JSON.stringify(data));
+  }catch(e){
+    showToast('保存できませんでした');
+  }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(()=> t.classList.remove('show'), 1600);
+}
+
+function entriesFor(dateStr, energyId){
+  return data.entries.filter(e => e.date === dateStr && (energyId ? e.energyId === energyId : true));
+}
+function remainingFor(dateStr, energy){
+  const sum = entriesFor(dateStr, energy.id).reduce((a,e)=> a + e.amount, 0);
+  return energy.budget + sum;
+}
+function pctFor(dateStr, energy){
+  return Math.round((remainingFor(dateStr, energy) / energy.budget) * 100);
+}
+function catById(id){
+  if (id === '__carryover__') return { id:'__carryover__', name:'繰越', color:'#9AA5AE' };
+  return data.categories.find(c => c.id === id);
+}
+function energyById(id){ return data.energyTypes.find(e => e.id === id); }
+
+/* live values account for an in-progress mode session */
+function currentRemaining(energy){
+  const am = data.activeMode;
+  const baseDate = (am && am.startDate) ? am.startDate : todayStr();
+  const base = remainingFor(baseDate, energy);
+  if (am && am.liveDelta && am.liveDelta[energy.id]) return base + am.liveDelta[energy.id];
+  return base;
+}
+function currentPct(energy){ return Math.round(currentRemaining(energy) / energy.budget * 100); }
+
+function messageFor(){
+  if (!data.energyTypes.length) return '';
+  const pcts = data.energyTypes.map(en => ({ en, pct: currentPct(en) }));
+  pcts.sort((a,b)=> a.pct - b.pct);
+  const lowest = pcts[0];
+  if (lowest.pct > 70) return '今日はまだ全体的に余裕があります。';
+  if (lowest.pct > 40) return `「${lowest.en.name}」を中心に、配分を少し意識してみましょう。`;
+  if (lowest.pct > 15) return `「${lowest.en.name}」が減ってきています。こまめに休憩を挟んでいきましょう。`;
+  if (lowest.pct >= 0) return `「${lowest.en.name}」がそろそろ底をつきそうです。充電のタイミングかもしれません。`;
+  return `「${lowest.en.name}」が今日の予算を超えています。ここで一区切りにしませんか。`;
+}
+
+function render(){
+  const ds = todayStr();
+  document.getElementById('dateLine').textContent = new Date().toLocaleDateString('ja-JP', { month:'long', day:'numeric', weekday:'short' });
+
+  renderTankCarousel();
+  document.getElementById('message').textContent = messageFor();
+  renderWarnBanner(ds);
+  renderModeArea();
+  renderBreakdownSwitch();
+  renderBreakdown(ds);
+  renderTrendLegend();
+  renderTrend();
+  renderHistory(ds);
+  renderInsights();
+}
+
+function tintForPct(baseColor, pct){
+  let top = baseColor, bot = shade(baseColor, -25);
+  if (pct <= 15 && pct >= 0){ top = mix(baseColor, '#B85C4A', 0.25); bot = shade(top, -25); }
+  if (pct < 0){ top = mix(baseColor, '#B85C4A', 0.55); bot = shade(top, -25); }
+  return { top, bot };
+}
+
+function renderTankCarousel(){
+  const carousel = document.getElementById('tankCarousel');
+  const dotsWrap = document.getElementById('carouselDots');
+  carousel.innerHTML = '';
+  dotsWrap.innerHTML = '';
+  const am = data.activeMode;
+
+  const energyPcts = data.energyTypes.map(en => ({ en, pct: currentPct(en) }));
+  const avgPct = energyPcts.length ? Math.round(energyPcts.reduce((a,x)=> a + x.pct, 0) / energyPcts.length) : 0;
+
+  /* page 1: overall big tank (always read-only) */
+  const overallFill = Math.max(0, Math.min(100, avgPct));
+  const overallTint = tintForPct('#6B7C8C', avgPct);
+  const page1 = document.createElement('div');
+  page1.className = 'tank-page';
+  page1.innerHTML = `
+    <div class="tank-wrap-big">
+      <div class="tank-big">
+        <div class="liquid" style="height:${overallFill}%; --liq-top:${overallTint.top}; background:linear-gradient(180deg, ${overallTint.top}, ${overallTint.bot});"></div>
+      </div>
+      <div class="tank-readout-big"><div class="tank-pct-big tnum">${avgPct}%</div></div>
+    </div>
+    <div class="tank-name-big"><span class="tank-dot" style="background:#6B7C8C"></span>総合</div>`;
+  carousel.appendChild(page1);
+
+  /* page 2: all energy tanks side by side (interactive while a mode is active) */
+  const page2 = document.createElement('div');
+  page2.className = 'tank-page';
+  const gridRow = document.createElement('div');
+  gridRow.className = 'tank-grid-row';
+  energyPcts.forEach(({en, pct})=>{
+    const fillPct = Math.max(0, Math.min(130, pct));
+    const { top, bot } = tintForPct(en.color, pct);
+    const unit = document.createElement('div');
+    unit.className = 'tank-grid-unit' + (am ? ' interactive' : '');
+    unit.style.setProperty('--unit-color', en.color);
+    unit.innerHTML = `
+      <div class="tank-wrap-mini">
+        <div class="tank-mini" id="mini-${en.id}">
+          <div class="liquid" style="height:${fillPct}%; --liq-top:${top}; background:linear-gradient(180deg, ${top}, ${bot});"></div>
+        </div>
+        <div class="tank-readout-mini"><div class="tank-pct-mini tnum">${pct}%</div></div>
+      </div>
+      <div class="tank-name-mini"><span class="tank-dot" style="background:${en.color}"></span>${en.name}</div>
+      ${am ? `<div class="mini-steppers">
+        <button class="mini-step-btn" data-en="${en.id}" data-dir="-1">−</button>
+        <button class="mini-step-btn" data-en="${en.id}" data-dir="1">＋</button>
+      </div>` : ''}`;
+    gridRow.appendChild(unit);
+  });
+  page2.appendChild(gridRow);
+  if (am){
+    const hint = document.createElement('div');
+    hint.className = 'drag-hint';
+    hint.textContent = 'タンクを直接ドラッグしても調整できます';
+    page2.appendChild(hint);
+  }
+  carousel.appendChild(page2);
+
+  const pages = [page1, page2];
+  pages.forEach(()=>{
+    const dot = document.createElement('div');
+    dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:var(--line);';
+    dotsWrap.appendChild(dot);
+  });
+
+  if (currentTankPage >= pages.length) currentTankPage = 0;
+  const dots = dotsWrap.children;
+  if (dots[currentTankPage]){
+    dots[currentTankPage].style.background = 'var(--ink-soft)';
+    dots[currentTankPage].style.transform = 'scale(1.3)';
+  }
+
+  requestAnimationFrame(()=>{
+    const w = carousel.clientWidth;
+    carousel.scrollLeft = currentTankPage * w;
+  });
+
+  carousel.onscroll = ()=>{
+    clearTimeout(carousel._st);
+    carousel._st = setTimeout(()=>{
+      const w = carousel.clientWidth;
+      if (!w) return;
+      const idx = Math.round(carousel.scrollLeft / w);
+      if (idx !== currentTankPage){
+        currentTankPage = idx;
+        [...dotsWrap.children].forEach((d,i)=>{
+          d.style.background = i===idx ? 'var(--ink-soft)' : 'var(--line)';
+          d.style.transform = i===idx ? 'scale(1.3)' : 'scale(1)';
+        });
+      }
+    }, 60);
+  };
+
+  if (am){
+    energyPcts.forEach(({en})=> attachDrag(document.getElementById(`mini-${en.id}`), en));
+    gridRow.querySelectorAll('.mini-step-btn').forEach(btn=>{
+      btn.onclick = ()=> nudge(btn.dataset.en, parseInt(btn.dataset.dir,10) * 5);
+    });
+  }
+}
+
+function attachDrag(tankEl, energy){
+  if (!tankEl) return;
+  let dragging = false;
+  let pendingPct = null;
+  const liquidEl = tankEl.querySelector('.liquid');
+  const pctEl = tankEl.parentElement.querySelector('.tank-pct-mini');
+
+  function updateFromClientY(clientY){
+    const rect = tankEl.getBoundingClientRect();
+    let pct = (1 - (clientY - rect.top) / rect.height) * 100;
+    pct = Math.max(0, Math.min(130, pct));
+    pendingPct = pct;
+    liquidEl.classList.add('no-transition');
+    liquidEl.style.height = pct + '%';
+    if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+  }
+
+  tankEl.addEventListener('pointerdown', (e)=>{
+    dragging = true;
+    tankEl.setPointerCapture(e.pointerId);
+    updateFromClientY(e.clientY);
+  });
+  tankEl.addEventListener('pointermove', (e)=>{
+    if (dragging) updateFromClientY(e.clientY);
+  });
+  const finish = ()=>{
+    if (!dragging) return;
+    dragging = false;
+    liquidEl.classList.remove('no-transition');
+    if (pendingPct !== null){
+      const am = data.activeMode;
+      if (am){
+        const baseDate = am.startDate;
+        const base = remainingFor(baseDate, energy);
+        const target = (pendingPct/100) * energy.budget;
+        am.liveDelta[energy.id] = Math.round(target - base);
+        saveData();
+        render();
+      }
+    }
+  };
+  tankEl.addEventListener('pointerup', finish);
+  tankEl.addEventListener('pointercancel', finish);
+}
+
+async function nudge(energyId, delta){
+  const am = data.activeMode;
+  if (!am) return;
+  am.liveDelta[energyId] = (am.liveDelta[energyId] || 0) + delta;
+  await saveData();
+  render();
+}
+
+function elapsedMinutes(am){
+  const start = new Date(am.startDate + 'T' + am.startTime + ':00');
+  const now = new Date();
+  return Math.max(0, Math.round((now - start) / 60000));
+}
+
+function renderWarnBanner(ds){
+  const wrap = document.getElementById('warnBanner');
+  const over = data.energyTypes.filter(en => currentPct(en) < 0 && !data.dismissedWarn.includes(en.id+'|'+ds));
+  if (!over.length){ wrap.innerHTML=''; return; }
+  const names = over.map(e=>e.name).join('・');
+  wrap.innerHTML = `<div class="warn-banner">
+    <span>「${names}」が今日の予算を超えています。少し休む時間をつくれると良さそうです。</span>
+    <button id="dismissWarn">わかった</button>
+  </div>`;
+  document.getElementById('dismissWarn').onclick = async ()=>{
+    over.forEach(e => data.dismissedWarn.push(e.id+'|'+ds));
+    await saveData();
+    render();
+  };
+}
+
+function renderModeArea(){
+  const wrap = document.getElementById('modeAreaWrap');
+  const am = data.activeMode;
+  if (!am){
+    wrap.innerHTML = `<div class="chips-row" id="chipsRow"></div>`;
+    const row = document.getElementById('chipsRow');
+    data.categories.forEach(cat=>{
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.style.setProperty('--chip-color', cat.color);
+      chip.innerHTML = `<span class="dot"></span>${cat.name}`;
+      chip.onclick = ()=> startMode(cat.id);
+      row.appendChild(chip);
+    });
+    return;
+  }
+  const cat = catById(am.categoryId) || { name:'（削除済み）' };
+  const mins = elapsedMinutes(am);
+  wrap.innerHTML = `
+    <div class="mode-banner">
+      <div class="mode-banner-info">
+        <div class="mode-banner-title"><span class="live-dot"></span>${cat.name}モード中</div>
+        <div class="mode-banner-sub">${am.startTime}〜（${mins}分経過）</div>
+      </div>
+      <div class="mode-banner-actions">
+        <button class="mode-end-btn" id="modeEndBtn">終了する</button>
+        <button class="mode-cancel-btn" id="modeCancelBtn">キャンセル</button>
+      </div>
+    </div>`;
+  document.getElementById('modeEndBtn').onclick = endMode;
+  document.getElementById('modeCancelBtn').onclick = cancelMode;
+}
+
+async function startMode(catId){
+  if (data.activeMode) return;
+  data.activeMode = { categoryId: catId, startDate: todayStr(), startTime: timeStr(), liveDelta: {} };
+  currentTankPage = 1;
+  await saveData();
+  render();
+}
+async function endMode(){
+  const am = data.activeMode;
+  if (!am) return;
+  const tm = timeStr();
+  Object.keys(am.liveDelta).forEach(id=>{
+    const v = Math.round(am.liveDelta[id]);
+    if (v){
+      data.entries.push({ id: genId(), date: am.startDate, time: tm, categoryId: am.categoryId, energyId: id, amount: v, note:'' });
+    }
+  });
+  data.activeMode = null;
+  await saveData();
+  render();
+  showToast('記録しました');
+}
+async function cancelMode(){
+  data.activeMode = null;
+  await saveData();
+  render();
+  showToast('キャンセルしました');
+}
+
+function renderBreakdownSwitch(){
+  const el = document.getElementById('breakdownSwitch');
+  el.innerHTML = '';
+  if (breakdownEnergyId === null && data.energyTypes[0]) breakdownEnergyId = data.energyTypes[0].id;
+  data.energyTypes.forEach(en=>{
+    const b = document.createElement('button');
+    b.className = (breakdownEnergyId===en.id ? 'selected' : '');
+    if (breakdownEnergyId===en.id) b.style.background = en.color;
+    b.innerHTML = `<span class="dot" style="background:${breakdownEnergyId===en.id?'#fff':en.color}"></span>${en.name}`;
+    b.onclick = ()=>{ breakdownEnergyId = en.id; renderBreakdown(todayStr()); renderBreakdownSwitch(); };
+    el.appendChild(b);
+  });
+}
+
+function renderBreakdown(ds){
+  const el = document.getElementById('breakdown');
+  const entries = entriesFor(ds, breakdownEnergyId);
+  const totals = {};
+  entries.forEach(e=>{ totals[e.categoryId] = (totals[e.categoryId]||0) + e.amount; });
+  const active = data.categories.filter(c => totals[c.id]);
+  if (!active.length){
+    const en = energyById(breakdownEnergyId);
+    el.innerHTML = `<div class="empty-state">「${en?en.name:''}」の今日の記録はまだありません。</div>`;
+    return;
+  }
+  const maxAbs = Math.max(...active.map(c => Math.abs(totals[c.id])), 1);
+  el.innerHTML = '';
+  active.forEach(c=>{
+    const v = totals[c.id];
+    const w = Math.min(100, Math.round(Math.abs(v)/maxAbs*100));
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `
+      <div class="bar-label">${c.name}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${w}%; background:${c.color}"></div></div>
+      <div class="bar-value tnum">${v>0?'+':''}${v}</div>`;
+    el.appendChild(row);
+  });
+}
+
+function renderTrendLegend(){
+  const el = document.getElementById('trendLegend');
+  el.innerHTML = '';
+  data.energyTypes.forEach(en=>{
+    const s = document.createElement('span');
+    s.innerHTML = `<span class="dot" style="background:${en.color}"></span>${en.name}`;
+    el.appendChild(s);
+  });
+}
+
+function renderTrend(){
+  const el = document.getElementById('trend');
+  el.innerHTML = '';
+  const days = [];
+  for (let i=6;i>=0;i--){
+    const d = new Date();
+    d.setDate(d.getDate()-i);
+    days.push(d);
+  }
+  const weekday = ['日','月','火','水','木','金','土'];
+  days.forEach(d=>{
+    const ds = todayStr(d);
+    const isToday = ds === todayStr();
+    const col = document.createElement('div');
+    col.className = 'trend-col' + (isToday ? ' today' : '');
+    const cluster = document.createElement('div');
+    cluster.className = 'trend-cluster';
+    data.energyTypes.forEach(en=>{
+      const pct = Math.max(0, Math.min(100, pctFor(ds, en)));
+      const bar = document.createElement('div');
+      bar.className = 'trend-bar';
+      bar.style.height = Math.max(4,pct) + '%';
+      bar.style.background = en.color;
+      cluster.appendChild(bar);
+    });
+    col.appendChild(cluster);
+    const lbl = document.createElement('div');
+    lbl.className = 'trend-day';
+    lbl.textContent = weekday[d.getDay()];
+    col.appendChild(lbl);
+    el.appendChild(col);
+  });
+}
+
+function renderHistory(ds){
+  const el = document.getElementById('history');
+  const entries = entriesFor(ds).slice().reverse();
+  if (!entries.length){
+    el.innerHTML = `<div class="empty-state">記録はまだありません。</div>`;
+    return;
+  }
+  el.innerHTML = '';
+  entries.forEach(e=>{
+    const cat = catById(e.categoryId) || { name:'（削除済み）', color:'#ccc' };
+    const en = energyById(e.energyId) || { name:'（削除済み）', color:'#ccc' };
+    const row = document.createElement('div');
+    row.className = 'history-item';
+    row.innerHTML = `
+      <div class="history-time">${e.time}</div>
+      <div class="history-dots">
+        <div class="history-dot" style="background:${cat.color}"></div>
+        <div class="history-dot" style="background:${en.color}"></div>
+      </div>
+      <div class="history-cat">${cat.name} <span class="history-energy">/ ${en.name}</span>${e.note ? `<div class="history-note">${escapeHtml(e.note)}</div>` : ''}</div>
+      <div class="history-amount tnum" style="color:${e.amount>0?'#8a7233':'var(--ink)'}">${e.amount>0?'+':''}${e.amount}</div>
+      <button class="history-del" data-id="${e.id}">✕</button>`;
+    el.appendChild(row);
+  });
+  el.querySelectorAll('.history-del').forEach(btn=>{
+    btn.onclick = async ()=>{
+      data.entries = data.entries.filter(e => e.id !== btn.dataset.id);
+      await saveData();
+      render();
+    };
+  });
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function computeDominantCategoryInsights(){
+  const days = [];
+  for (let i=0;i<7;i++) days.push(addDays(todayStr(), -i));
+  const entries = data.entries.filter(e => days.includes(e.date) && e.categoryId !== '__carryover__' && e.amount < 0);
+  const insights = [];
+  data.energyTypes.forEach(en=>{
+    const enEntries = entries.filter(e => e.energyId === en.id);
+    if (enEntries.length < 3) return;
+    const totalDrain = enEntries.reduce((a,e)=> a + Math.abs(e.amount), 0);
+    const byCat = {};
+    enEntries.forEach(e => { byCat[e.categoryId] = (byCat[e.categoryId]||0) + Math.abs(e.amount); });
+    let topCatId = null, topVal = 0;
+    Object.keys(byCat).forEach(cid=>{ if (byCat[cid] > topVal){ topVal = byCat[cid]; topCatId = cid; } });
+    if (!topCatId || totalDrain <= 0) return;
+    const share = topVal / totalDrain;
+    if (share >= 0.4){
+      const cat = catById(topCatId);
+      insights.push({
+        color: en.color,
+        text: `直近7日間、「${en.name}」の消費は「${cat ? cat.name : '不明なカテゴリ'}」が中心になっています（全体の${Math.round(share*100)}%）。`
+      });
+    }
+  });
+  return insights;
+}
+
+function computeWeekdayInsights(){
+  const lookback = 42;
+  const days = [];
+  for (let i=0;i<lookback;i++) days.push(addDays(todayStr(), -i));
+  const entries = data.entries.filter(e => days.includes(e.date) && e.categoryId !== '__carryover__');
+  const weekdayNames = ['日','月','火','水','木','金','土'];
+  const insights = [];
+  data.energyTypes.forEach(en=>{
+    const enEntries = entries.filter(e => e.energyId === en.id);
+    if (enEntries.length < 4) return;
+    const byWeekday = {};
+    enEntries.forEach(e=>{
+      const wd = new Date(e.date + 'T00:00:00').getDay();
+      if (!byWeekday[wd]) byWeekday[wd] = { sum:0, dates:new Set() };
+      byWeekday[wd].sum += e.amount;
+      byWeekday[wd].dates.add(e.date);
+    });
+    let worstWd = null, worstAvg = 0;
+    Object.keys(byWeekday).forEach(wd=>{
+      const info = byWeekday[wd];
+      if (info.dates.size < 2) return;
+      const avg = info.sum / info.dates.size;
+      if (avg < worstAvg){ worstAvg = avg; worstWd = wd; }
+    });
+    if (worstWd === null) return;
+    if (worstAvg <= -15){
+      insights.push({
+        color: en.color,
+        text: `「${en.name}」は${weekdayNames[worstWd]}曜日に大きく減る傾向があります（平均${Math.round(worstAvg)}）。`
+      });
+    }
+  });
+  return insights;
+}
+
+function renderInsightList(elId, insights, emptyMsg){
+  const el = document.getElementById(elId);
+  if (!insights.length){
+    el.innerHTML = `<div class="empty-state">${emptyMsg}</div>`;
+    return;
+  }
+  el.innerHTML = '';
+  insights.forEach(ins=>{
+    const card = document.createElement('div');
+    card.className = 'insight-card';
+    card.style.setProperty('--card-color', ins.color);
+    card.textContent = ins.text;
+    el.appendChild(card);
+  });
+}
+
+function renderInsights(){
+  renderInsightList('insightDominant', computeDominantCategoryInsights(), 'まだ十分なデータがありません。数日記録を続けると、ここに傾向が表示されます。');
+  renderInsightList('insightWeekday', computeWeekdayInsights(), '曜日ごとの傾向を見るには、数週間分の記録が必要です。もう少し使ってみてください。');
+}
+
+function switchScreen(name){
+  document.querySelectorAll('.screen').forEach(s=> s.classList.remove('active'));
+  document.getElementById('screen'+name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=> b.classList.toggle('active', b.dataset.screen===name));
+  window.scrollTo({ top:0 });
+}
+document.getElementById('navHome').onclick = ()=> switchScreen('Home');
+document.getElementById('navHistory').onclick = ()=> switchScreen('History');
+document.getElementById('navAnalysis').onclick = ()=> switchScreen('Analysis');
+
+function openSettings(){
+  renderEnergyEditor();
+  renderCatEditor();
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeSettings(){
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function renderEnergyEditor(){
+  const el = document.getElementById('energyEditor');
+  el.innerHTML = '';
+  data.energyTypes.forEach((en, idx)=>{
+    const row = document.createElement('div');
+    row.className = 'energy-editor-row';
+    row.innerHTML = `
+      <div class="row-top">
+        <input type="text" value="${escapeHtml(en.name)}" class="enNameInput">
+        <button class="row-del">✕</button>
+      </div>
+      <div class="row-bottom">
+        <div class="swatches"></div>
+        <div class="budget-input">予算<input type="number" value="${en.budget}" min="10" step="5" class="enBudgetInput"></div>
+        <div class="budget-input">翌日回復<input type="number" value="${en.overnightRecovery}" min="0" step="5" class="enRecoveryInput"></div>
+      </div>`;
+    el.appendChild(row);
+
+    const swatchWrap = row.querySelector('.swatches');
+    PRESET_COLORS.forEach(color=>{
+      const sw = document.createElement('div');
+      sw.className = 'swatch' + (en.color===color?' selected':'');
+      sw.style.background = color;
+      sw.onclick = ()=>{ en.color = color; renderEnergyEditor(); };
+      swatchWrap.appendChild(sw);
+    });
+    row.querySelector('.row-del').onclick = ()=>{
+      if (data.energyTypes.length <= 1){ showToast('エネルギーは1つ以上必要です'); return; }
+      data.energyTypes.splice(idx,1);
+      renderEnergyEditor();
+    };
+    row.querySelector('.enNameInput').oninput = (e)=>{ en.name = e.target.value; };
+    row.querySelector('.enBudgetInput').oninput = (e)=>{
+      const v = parseInt(e.target.value,10);
+      en.budget = (isNaN(v) || v<=0) ? en.budget : v;
+    };
+    row.querySelector('.enRecoveryInput').oninput = (e)=>{
+      const v = parseInt(e.target.value,10);
+      en.overnightRecovery = isNaN(v) ? en.overnightRecovery : Math.max(0, v);
+    };
+  });
+}
+
+function renderCatEditor(){
+  const el = document.getElementById('catEditor');
+  el.innerHTML = '';
+  data.categories.forEach((cat, idx)=>{
+    const row = document.createElement('div');
+    row.className = 'cat-editor-row';
+    row.innerHTML = `
+      <div class="row-top">
+        <input type="text" value="${escapeHtml(cat.name)}" class="catNameInput">
+        <button class="row-del">✕</button>
+      </div>
+      <div class="row-bottom">
+        <div class="swatches"></div>
+      </div>`;
+    el.appendChild(row);
+
+    const swatchWrap = row.querySelector('.swatches');
+    PRESET_COLORS.forEach(color=>{
+      const sw = document.createElement('div');
+      sw.className = 'swatch' + (cat.color===color?' selected':'');
+      sw.style.background = color;
+      sw.onclick = ()=>{ cat.color = color; renderCatEditor(); };
+      swatchWrap.appendChild(sw);
+    });
+    row.querySelector('.row-del').onclick = ()=>{
+      if (data.categories.length <= 1){ showToast('カテゴリは1つ以上必要です'); return; }
+      data.categories.splice(idx,1);
+      renderCatEditor();
+    };
+    row.querySelector('.catNameInput').oninput = (e)=>{ cat.name = e.target.value; };
+  });
+}
+
+document.getElementById('settingsBtn').onclick = openSettings;
+document.getElementById('closeModal').onclick = closeSettings;
+document.getElementById('modalOverlay').onclick = (e)=>{ if (e.target.id === 'modalOverlay') closeSettings(); };
+document.getElementById('addEnergyBtn').onclick = ()=>{
+  data.energyTypes.push({ id: genId(), name:'新しいエネルギー', color: PRESET_COLORS[data.energyTypes.length % PRESET_COLORS.length], budget:100, overnightRecovery:70 });
+  renderEnergyEditor();
+};
+document.getElementById('addCatBtn').onclick = ()=>{
+  data.categories.push({ id: genId(), name:'新しいカテゴリ', color: PRESET_COLORS[data.categories.length % PRESET_COLORS.length] });
+  renderCatEditor();
+};
+document.getElementById('saveSettings').onclick = async ()=>{
+  await saveData();
+  closeSettings();
+  render();
+  showToast('設定を保存しました');
+};
+document.getElementById('tipToggle').onclick = ()=>{
+  document.getElementById('tipContent').classList.toggle('open');
+};
+
+(async function init(){
+  await loadData();
+  render();
+})();
+</script>
+</body>
+</html>
